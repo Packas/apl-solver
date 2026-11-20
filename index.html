@@ -139,6 +139,18 @@ button { font: inherit; color: var(--fg); cursor: pointer; }
 .legend i { flex: 1; height: 6px; border-radius: 3px; background: linear-gradient(90deg, var(--off), var(--on)); }
 .shove-l { --on: var(--accent); } .call-l { --on: var(--call); }
 
+.trow { display: grid; grid-template-columns: minmax(0, 1.5fr) 36px minmax(0, 1fr) 36px minmax(0, 1.2fr); gap: 6px; align-items: center; }
+.trow input { font-size: 16px; padding: 8px; text-align: right; }
+.trow .tc { text-align: center; }
+.trow .step { padding: 6px 0; font-size: 18px; line-height: 1; }
+.trow .sub { text-align: right; font-variant-numeric: tabular-nums; color: var(--muted); font-size: 14px; }
+.ttotal { display: flex; justify-content: space-between; align-items: baseline; border-top: 1px solid var(--line); padding-top: 12px; }
+.ttotal .num { font-size: 34px; font-weight: 700; color: var(--accent-text); font-variant-numeric: tabular-nums; }
+.btn.go { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); font-weight: 600; padding: 10px 12px; }
+details.card[open] > summary { margin-bottom: 14px; }
+.tallyrows { display: flex; flex-direction: column; gap: 6px; }
+.trow .tvs { text-align: right; color: var(--muted); font-size: 16px; padding-right: 8px; font-variant-numeric: tabular-nums; }
+.sum { float: right; font-family: var(--font-display); font-size: 22px; font-weight: 700; color: var(--accent-text); font-variant-numeric: tabular-nums; line-height: 1.1; }
 details { font-size: 14px; color: var(--muted); }
 summary { cursor: pointer; color: var(--fg); font-weight: 500; }
 details ul { margin: 10px 0 0; padding-left: 18px; display: flex; flex-direction: column; gap: 6px; }
@@ -154,16 +166,20 @@ details ul { margin: 10px 0 0; padding-left: 18px; display: flex; flex-direction
     <h1>APL Shove Solver</h1>
   </header>
 
-  <section class="card" aria-labelledby="h-stack">
-    <h2 id="h-stack">Your stack</h2>
-    <div class="field">
-      <label for="chips">Your chips</label>
-      <input id="chips" type="text" inputmode="numeric" autocomplete="off" value="50000">
+  <details class="card" id="tally-me" open>
+    <summary>Your chips <b class="sum" id="sum-me">0</b></summary>
+    <div class="field" style="gap:10px">
+      <p class="note">Count each chip you hold. Change a value if it does not match your chips.</p>
+      <div class="tallyrows" id="rows-me"></div>
       <div class="row">
-        <button class="btn" id="b-start" type="button">Reset to 50,000</button>
-        <button class="btn" id="b-rebuy" type="button">+ 50,000 rebuy</button>
+        <button class="btn" id="tally-add" type="button">Add a row</button>
+        <button class="btn" id="tally-clear-me" type="button">Clear</button>
       </div>
     </div>
+  </details>
+
+  <section class="card" aria-labelledby="h-stack">
+    <h2 id="h-stack">Your stack</h2>
     <div class="field">
       <label for="level">Blind level</label>
       <div class="row" style="flex-wrap:nowrap">
@@ -177,6 +193,15 @@ details ul { margin: 10px 0 0; padding-left: 18px; display: flex; flex-direction
     </div>
     <div class="facts" id="facts"></div>
   </section>
+
+  <details class="card" id="tally-opp">
+    <summary>Other player's chips, optional <b class="sum" id="sum-opp">0</b></summary>
+    <div class="field" style="gap:10px">
+      <p class="note">Count the stack of the player you are up against. If it is smaller than yours, the charts use it.</p>
+      <div class="tallyrows" id="rows-opp"></div>
+      <div class="row"><button class="btn" id="tally-clear-opp" type="button">Clear</button></div>
+    </div>
+  </details>
 
   <section class="card" aria-labelledby="h-shove">
     <h2 id="h-shove">Shove or fold</h2>
@@ -239,18 +264,24 @@ details ul { margin: 10px 0 0; padding-left: 18px; display: flex; flex-direction
     { t: '00:19', sb: 500000, bb: 1000000 }, { t: '00:31', sb: 1000000, bb: 2000000 }, { t: '00:43', sb: 2000000, bb: 4000000 },
     { t: '00:55', sb: 3000000, bb: 6000000 }
   ];
-  var state = { chips: 50000, live: true, levelIdx: 0, seat: 3, shoverP: 2, role: 'BB', sel: { shove: -1, call: -1 } };
+  var state = { chips: 0, live: true, levelIdx: 0, seat: 3, shoverP: 2, role: 'BB', opp: 0, denoms: [100, 500, 1000, 5000, 25000, 100000], counts: [0, 0, 0, 0, 0, 0], oppCounts: [0, 0, 0, 0, 0, 0], sel: { shove: -1, call: -1 } };
   try {
     var saved = JSON.parse(localStorage.getItem('apl-shove') || '{}');
-    if (typeof saved.chips === 'number' && saved.chips >= 0) state.chips = saved.chips;
     if (saved.seat >= 1 && saved.seat <= 7) state.seat = saved.seat;
     if (saved.shoverP >= 1 && saved.shoverP <= 7) state.shoverP = saved.shoverP;
     if (saved.role) state.role = saved.role;
+    if (Array.isArray(saved.denoms) && Array.isArray(saved.counts) && saved.denoms.length === saved.counts.length && saved.denoms.length > 0 && saved.denoms.length <= 12) {
+      state.denoms = saved.denoms.map(function (x) { return +x || 0; });
+      state.counts = saved.counts.map(function (x) { return +x || 0; });
+      state.oppCounts = (Array.isArray(saved.oppCounts) && saved.oppCounts.length === state.denoms.length)
+        ? saved.oppCounts.map(function (x) { return +x || 0; })
+        : state.denoms.map(function () { return 0; });
+    }
     if (typeof saved.live === 'boolean') state.live = saved.live;
     if (saved.levelIdx >= 0 && saved.levelIdx < LV.length && !LV[saved.levelIdx].brk) state.levelIdx = saved.levelIdx;
   } catch (e) {}
   function save() {
-    try { localStorage.setItem('apl-shove', JSON.stringify({ chips: state.chips, live: state.live, levelIdx: state.levelIdx, seat: state.seat, shoverP: state.shoverP, role: state.role })); } catch (e) {}
+    try { localStorage.setItem('apl-shove', JSON.stringify({ chips: state.chips, live: state.live, levelIdx: state.levelIdx, seat: state.seat, shoverP: state.shoverP, role: state.role, denoms: state.denoms, counts: state.counts, oppCounts: state.oppCounts })); } catch (e) {}
   }
 
   var $ = function (s) { return document.querySelector(s); };
@@ -363,7 +394,7 @@ details ul { margin: 10px 0 0; padding-left: 18px; display: flex; flex-direction
   function renderTop() {
     var c = current(), L = LV[c.idx], bb = L.bb;
     var M = state.chips / bb;
-    var z = zoneFor(M);
+    var z = state.chips > 0 ? zoneFor(M) : ['Count your chips', 'Add up your chips above to see your payments and the right chart.'];
     $('#m-big').innerHTML = (state.chips > 0 ? mTxt(M) : '&ndash;') + '<small>payments</small>';
     $('#zone').innerHTML = '<strong>' + z[0] + '</strong>' + z[1];
 
@@ -382,8 +413,12 @@ details ul { margin: 10px 0 0; padding-left: 18px; display: flex; flex-direction
       var nM = state.chips / LV[ni].bb;
       facts.push('Next level <b>' + fmt(LV[ni].sb) + ' / ' + fmt(LV[ni].bb) + '</b> leaves you <b>' + mTxt(nM) + '</b> payments');
     }
-    var rb = 50000 / bb;
-    facts.push('A $10 rebuy gives <b>' + mTxt(rb) + '</b> payments right now' + (rb < 10 ? '. Treat it as a shove, not a plan.' : '.'));
+    var rebuyOpen = c.idx <= 4;
+    if (rebuyOpen) {
+      facts.push('A $10 rebuy gives <b>' + mTxt(50000 / bb) + '</b> payments. Open until the first break (20:33). Check with the host.');
+    } else {
+      facts.push('Rebuys closed at the first break. Busting now means you are out.');
+    }
     $('#facts').innerHTML = facts.map(function (f) { return '<p>' + f + '</p>'; }).join('');
     $('#live').setAttribute('aria-pressed', state.live ? 'true' : 'false');
     $('#level').disabled = c.live;
@@ -393,7 +428,9 @@ details ul { margin: 10px 0 0; padding-left: 18px; display: flex; flex-direction
   }
 
   function renderCharts() {
-    var c = current(), M = state.chips / LV[c.idx].bb;
+    var c = current(), bbNow = LV[c.idx].bb;
+    var shortOpp = state.opp > 0 && state.opp < state.chips;
+    var M = (shortOpp ? state.opp : state.chips) / bbNow;
     var capped = Math.max(1.5, Math.min(20, M));
     var si = stackIndex(capped), solved = D.stacks[si];
     var hasChips = state.chips > 0;
@@ -404,9 +441,13 @@ details ul { margin: 10px 0 0; padding-left: 18px; display: flex; flex-direction
     var pct = D.shovePct[p][si];
     $('#shove-stat').innerHTML = '<span class="num s">' + pct + '%</span><span>of hands at ' + solved + 'bb, ' + Math.round(pct * 13.26) + ' of 1,326 combos</span>';
     var warn = '';
-    if (!hasChips) warn = 'Enter your chips to see a chart for your stack.';
-    else if (M > 20) warn = 'You have ' + mTxt(M) + ' payments. Shoving is not the play yet. This is the 20bb chart, the widest you would ever go from here.';
-    else if (Math.abs(solved - M) > 0.6) warn = 'Closest solved stack is ' + solved + 'bb. You have ' + mTxt(M) + '.';
+    if (!hasChips) warn = 'Count your chips above to see a chart for your stack.';
+    else {
+      if (shortOpp) warn = 'The other player has the shorter stack, so the charts use their ' + mTxt(M) + ' payments. ';
+      var who = shortOpp ? 'They have' : 'You have';
+      if (M > 20) warn += who + ' ' + mTxt(M) + ' payments. Shoving is not the play yet. This is the 20bb chart, the widest you would ever go from here.';
+      else if (Math.abs(solved - M) > 0.6) warn += 'Closest solved stack is ' + solved + 'bb. ' + who + ' ' + mTxt(M) + '.';
+    }
     $('#shove-warn').innerHTML = warn ? '<p class="warn">' + warn + '</p>' : '';
     paint('#grid-shove', D.shove[p][si], 'shove');
 
@@ -438,25 +479,75 @@ details ul { margin: 10px 0 0; padding-left: 18px; display: flex; flex-direction
       s.appendChild(o);
     });
   }
-  function readChips() {
-    var v = parseInt(($('#chips').value || '').replace(/[^0-9]/g, ''), 10);
-    state.chips = isNaN(v) ? 0 : v;
-  }
 
   buildGrid('#grid-shove', 'shove');
   buildGrid('#grid-call', 'call');
   buildSeats('#seats', 'seat');
   buildSeats('#shover-seats', 'shoverP');
   buildLevelSelect();
-  $('#chips').value = state.chips ? fmt(state.chips) : '';
+  recompute(); buildTally('me'); buildTally('opp'); updateSums();
   var cur0 = current();
   if (!cur0.live && state.live) { /* clock is outside the event window */ state.live = false; }
   $('#level').value = String(state.levelIdx);
 
-  $('#chips').addEventListener('input', function () { readChips(); save(); renderAll(); });
-  $('#chips').addEventListener('blur', function () { $('#chips').value = state.chips ? fmt(state.chips) : ''; });
-  $('#b-start').addEventListener('click', function () { state.chips = 50000; $('#chips').value = fmt(50000); save(); renderAll(); });
-  $('#b-rebuy').addEventListener('click', function () { state.chips += 50000; $('#chips').value = fmt(state.chips); save(); renderAll(); });
+  function total(counts) { var s = 0; for (var i = 0; i < state.denoms.length; i++) s += state.denoms[i] * (counts[i] || 0); return s; }
+  function recompute() { state.chips = total(state.counts); state.opp = total(state.oppCounts); }
+  function updateSums() {
+    $('#sum-me').textContent = fmt(state.chips);
+    $('#sum-opp').textContent = fmt(state.opp);
+    state.denoms.forEach(function (v, i) {
+      var a = $('#ts-me-' + i), b = $('#ts-opp-' + i);
+      if (a) a.textContent = fmt(v * state.counts[i]);
+      if (b) b.textContent = fmt(v * state.oppCounts[i]);
+    });
+  }
+  function buildTally(kind) {
+    var host = $('#rows-' + kind), counts = kind === 'me' ? state.counts : state.oppCounts;
+    host.innerHTML = '';
+    state.denoms.forEach(function (v, i) {
+      var row = document.createElement('div'); row.className = 'trow'; row.dataset.i = i;
+      var val = kind === 'me'
+        ? '<input class="tv" id="tv-' + i + '" type="text" inputmode="numeric" autocomplete="off" aria-label="Chip value" value="' + (v ? fmt(v) : '') + '">'
+        : '<span class="tvs" id="tvs-' + i + '">' + (v ? fmt(v) : '') + '</span>';
+      row.innerHTML = val +
+        '<button class="btn step" type="button" data-d="-1" aria-label="Remove one chip">&minus;</button>' +
+        '<input class="tc" id="tc-' + kind + '-' + i + '" type="text" inputmode="numeric" autocomplete="off" aria-label="How many" value="' + counts[i] + '">' +
+        '<button class="btn step" type="button" data-d="1" aria-label="Add one chip">+</button>' +
+        '<span class="sub" id="ts-' + kind + '-' + i + '"></span>';
+      host.appendChild(row);
+    });
+  }
+  function changed() { recompute(); updateSums(); save(); renderAll(); }
+  function wireRows(kind) {
+    var host = $('#rows-' + kind), key = kind === 'me' ? 'counts' : 'oppCounts';
+    host.addEventListener('input', function (ev) {
+      var row = ev.target.closest('.trow'); if (!row) return;
+      var i = +row.dataset.i, n = parseInt(ev.target.value.replace(/[^0-9]/g, ''), 10);
+      if (isNaN(n)) n = 0;
+      if (ev.target.classList.contains('tv')) { state.denoms[i] = n; var s = $('#tvs-' + i); if (s) s.textContent = n ? fmt(n) : ''; }
+      else if (ev.target.classList.contains('tc')) state[key][i] = n;
+      changed();
+    });
+    host.addEventListener('click', function (ev) {
+      var b = ev.target.closest('.step'); if (!b) return;
+      var i = +b.closest('.trow').dataset.i;
+      state[key][i] = Math.max(0, state[key][i] + (+b.dataset.d));
+      $('#tc-' + kind + '-' + i).value = state[key][i];
+      changed();
+    });
+  }
+  wireRows('me'); wireRows('opp');
+  $('#tally-add').addEventListener('click', function () {
+    if (state.denoms.length >= 12) return;
+    state.denoms.push(0); state.counts.push(0); state.oppCounts.push(0);
+    buildTally('me'); buildTally('opp'); changed();
+  });
+  $('#tally-clear-me').addEventListener('click', function () {
+    state.counts = state.counts.map(function () { return 0; }); buildTally('me'); changed();
+  });
+  $('#tally-clear-opp').addEventListener('click', function () {
+    state.oppCounts = state.oppCounts.map(function () { return 0; }); buildTally('opp'); changed();
+  });
   $('#live').addEventListener('click', function () {
     var c = current();
     if (!state.live) {
