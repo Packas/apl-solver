@@ -3,6 +3,13 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#111314">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="APL Shove">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
 <title>APL Shove Trainer</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600&family=Barlow+Condensed:wght@500;600;700&display=swap">
 <style>
@@ -149,7 +156,7 @@ select { background-image: linear-gradient(45deg, transparent 50%, var(--muted) 
 @media (prefers-reduced-motion: no-preference) { .act, .tab, .btn { transition: background-color 0.12s; } }
 </style>
 
-<style>html{-webkit-text-size-adjust:100%}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
+<style>html{-webkit-text-size-adjust:100%}body{margin:0;padding-bottom:calc(40px + env(safe-area-inset-bottom,0px))}img{max-width:100%}[hidden]{display:none!important}</style>
 </head>
 <body>
 <main class="wrap">
@@ -529,5 +536,6 @@ select { background-image: linear-gradient(45deg, transparent 50%, var(--muted) 
 })();
 </script>
 
+<script>if('serviceWorker' in navigator){window.addEventListener('load',function(){navigator.serviceWorker.register('sw.js').catch(function(){});});}</script>
 </body>
 </html>
