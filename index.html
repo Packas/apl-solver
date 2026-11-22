@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <meta name="theme-color" content="#111314">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
@@ -171,7 +171,7 @@ details ul { margin: 10px 0 0; padding-left: 18px; display: flex; flex-direction
 @media (prefers-reduced-motion: no-preference) { .cell, .btn, .seat { transition: background-color 0.12s; } }
 </style>
 
-<style>html{-webkit-text-size-adjust:100%}body{margin:0;padding-bottom:calc(40px + env(safe-area-inset-bottom,0px))}img{max-width:100%}[hidden]{display:none!important}</style>
+<style>html{-webkit-text-size-adjust:100%}body{margin:0;padding-bottom:calc(40px + env(safe-area-inset-bottom,0px))}img{max-width:100%}[hidden]{display:none!important}html,body{touch-action:manipulation}button,select,summary,a,label,.cell,.seat,.tab,.act,.btn{touch-action:manipulation;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent}input{touch-action:manipulation}</style>
 </head>
 <body>
 <main class="wrap">
@@ -640,6 +640,7 @@ details ul { margin: 10px 0 0; padding-left: 18px; display: flex; flex-direction
 })();
 </script>
 
+<script>['gesturestart','gesturechange','gestureend'].forEach(function(n){document.addEventListener(n,function(e){e.preventDefault();});});</script>
 <script>if('serviceWorker' in navigator){window.addEventListener('load',function(){navigator.serviceWorker.register('sw.js').catch(function(){});});}</script>
 </body>
 </html>

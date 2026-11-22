@@ -1,5 +1,5 @@
 // Offline support. Pages are fetched fresh when online and kept for when you are not.
-var CACHE = 'apl-shove-5eef350b9a';
+var CACHE = 'apl-shove-34a4829646';
 var CORE = ['./', 'index.html', 'trainer.html', 'manifest.webmanifest', 'icon-192.png', 'icon-512.png', 'apple-touch-icon.png'];
 self.addEventListener('install', function (e) {
   e.waitUntil(caches.open(CACHE).then(function (c) {
